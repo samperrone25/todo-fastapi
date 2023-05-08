@@ -1,34 +1,44 @@
 from fastapi import FastAPI, Query, Path # api framework
 from typing import Annotated # validation in api
 from pydantic import BaseModel # data model
-from datetime import datetime # timestamping
-import redis # db
-
-r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-ans = r.set('joe', 47)
-ans2 = r.get('joe')
-ans3 = r.get('joe')
-print(ans) # still strings
-print(ans2) 
-ans4 = int(ans2)+int(ans3)
-print(ans4)
-
+import time # timestamping
+import redis # redis
+import json
 
 class Item(BaseModel):
     id: int
     title: str
     description: str | None = None
     done: bool = False
-    timestamp: int = datetime.now()
+    timestamp: float = time.time()
+
+    def toDict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "done": self.done,
+            "timestamp": self.timestamp
+        }
+
+rDB = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 item1 = Item(id=0, title="bins", description="take them out")
 item2 = Item(id=1, title="car")
 item3 = Item(id=2, title="room", description="tidy")
-
 items = []
 items.append(item1)
 items.append(item2)
 items.append(item3)
+
+dict1 = item1.toDict()
+json1 = json.dumps(dict1)
+rDB.set("item1", json1)
+print(rDB.type("item1"))
+ans = rDB.get("item1")
+res = json.loads(ans)
+print(res["description"])
+# successfully saved item in redis
 
 app = FastAPI()
 
